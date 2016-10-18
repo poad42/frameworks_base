@@ -386,6 +386,11 @@ public class VectorDrawable extends Drawable {
     protected boolean onStateChange(int[] stateSet) {
         boolean changed = false;
 
+        // When the VD is stateful, we need to mutate the drawable such that we don't share the
+        // cache bitmap with others. Such that the state change only affect this new cached bitmap.
+        if (isStateful()) {
+            mutate();
+        }
         final VectorDrawableState state = mVectorState;
         if (state.onStateChange(stateSet)) {
             changed = true;

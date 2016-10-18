@@ -314,8 +314,12 @@ public class SystemServicesProxy {
         if (includeFrontMostExcludedTask) {
             flags |= ActivityManager.RECENT_WITH_EXCLUDED;
         }
-        List<ActivityManager.RecentTaskInfo> tasks = mAm.getRecentTasksForUser(numTasksToQuery,
-                flags, userId);
+        List<ActivityManager.RecentTaskInfo> tasks = null;
+        try {
+            tasks = mAm.getRecentTasksForUser(numTasksToQuery, flags, userId);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get recent tasks", e);
+        }
 
         // Break early if we can't get a valid set of tasks
         if (tasks == null) {
@@ -330,8 +334,9 @@ public class SystemServicesProxy {
             // NOTE: The order of these checks happens in the expected order of the traversal of the
             // tasks
 
-            // Remove the task if it is blacklisted
-            if (sRecentsBlacklist.contains(t.realActivity.getClassName())) {
+            // Remove the task if it or it's package are blacklsited
+            if (sRecentsBlacklist.contains(t.realActivity.getClassName()) ||
+                    sRecentsBlacklist.contains(t.realActivity.getPackageName())) {
                 iter.remove();
                 continue;
             }

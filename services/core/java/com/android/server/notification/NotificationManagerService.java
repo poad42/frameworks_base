@@ -1983,6 +1983,7 @@ public class NotificationManagerService extends SystemService {
                     android.Manifest.permission.MANAGE_NOTIFICATIONS)) {
                 return;
             }
+            checkCallerIsSameApp(pkg);
             if (!checkPolicyAccess(pkg)) {
                 Slog.w(TAG, "Notification policy access denied calling " + method);
                 throw new SecurityException("Notification policy access denied");
@@ -2563,7 +2564,22 @@ public class NotificationManagerService extends SystemService {
                     + " id=" + id + " notification=" + notification);
         }
 
-        markAsSentFromNotification(notification);
+        // Whitelist pending intents.
+        if (notification.allPendingIntents != null) {
+            final int intentCount = notification.allPendingIntents.size();
+            if (intentCount > 0) {
+                final ActivityManagerInternal am = LocalServices
+                        .getService(ActivityManagerInternal.class);
+                final long duration = LocalServices.getService(
+                        DeviceIdleController.LocalService.class).getNotificationWhitelistDuration();
+                for (int i = 0; i < intentCount; i++) {
+                    PendingIntent pendingIntent = notification.allPendingIntents.valueAt(i);
+                    if (pendingIntent != null) {
+                        am.setPendingIntentWhitelistDuration(pendingIntent.getTarget(), duration);
+                    }
+                }
+            }
+        }
 
         // Sanitize inputs
         notification.priority = clamp(notification.priority, Notification.PRIORITY_MIN,
@@ -2577,40 +2593,6 @@ public class NotificationManagerService extends SystemService {
         mHandler.post(new EnqueueNotificationRunnable(userId, r));
 
         idOut[0] = id;
-    }
-
-    private static void markAsSentFromNotification(Notification notification) {
-        final ActivityManagerInternal am = LocalServices.getService(ActivityManagerInternal.class);
-        final long duration = LocalServices.getService(DeviceIdleController.LocalService.class)
-                .getNotificationWhitelistDuration();
-
-        if (notification.contentIntent != null) {
-            am.setPendingIntentWhitelistDuration(notification.contentIntent.getTarget(), duration);
-        }
-        if (notification.deleteIntent != null) {
-            am.setPendingIntentWhitelistDuration(notification.deleteIntent.getTarget(), duration);
-        }
-        if (notification.fullScreenIntent != null) {
-            am.setPendingIntentWhitelistDuration(notification.fullScreenIntent.getTarget(),
-                    duration);
-        }
-        if (notification.actions != null) {
-            for (Notification.Action action: notification.actions) {
-                if (action.actionIntent == null) {
-                    continue;
-                }
-                am.setPendingIntentWhitelistDuration(action.actionIntent.getTarget(), duration);
-            }
-        }
-        if (notification.extrasPendingIntents != null) {
-            final int intentCount = notification.extrasPendingIntents.size();
-            for (int i = 0; i < intentCount; i++) {
-                PendingIntent pendingIntent = notification.extrasPendingIntents.valueAt(i);
-                if (pendingIntent != null) {
-                    am.setPendingIntentWhitelistDuration(pendingIntent.getTarget(), duration);
-                }
-            }
-        }
     }
 
     private class EnqueueNotificationRunnable implements Runnable {
@@ -3662,6 +3644,10 @@ public class NotificationManagerService extends SystemService {
         if (isCallerSystem()) {
             return;
         }
+        checkCallerIsSameApp(pkg);
+    }
+
+    private static void checkCallerIsSameApp(String pkg) {
         final int uid = Binder.getCallingUid();
         try {
             ApplicationInfo ai = AppGlobals.getPackageManager().getApplicationInfo(

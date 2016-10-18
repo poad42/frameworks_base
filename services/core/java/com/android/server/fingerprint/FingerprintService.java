@@ -501,7 +501,7 @@ public class FingerprintService extends SystemService implements IBinder.DeathRe
         if (DEBUG) Slog.v(TAG, "startAuthentication(" + opPackageName + ")");
 
         AuthenticationClient client = new AuthenticationClient(getContext(), mHalDeviceId, token,
-                receiver, callingUserId, groupId, opId, restricted, opPackageName) {
+                receiver, mCurrentUserId, groupId, opId, restricted, opPackageName) {
             @Override
             public boolean handleFailedAttempt() {
                 mFailedAttempts++;
@@ -1019,14 +1019,12 @@ public class FingerprintService extends SystemService implements IBinder.DeathRe
         }
     }
 
+    /***
+     * @param opPackageName the name of the calling package
+     * @return authenticator id for the current user
+     */
     public long getAuthenticatorId(String opPackageName) {
-        if (canUseFingerprint(opPackageName, false /* foregroundOnly */,
-                Binder.getCallingUid(), Binder.getCallingPid())) {
-            return mCurrentAuthenticatorId;
-        } else {
-            Slog.w(TAG, "Client isn't current, returning authenticator_id=0");
-        }
-        return 0;
+        return mCurrentAuthenticatorId;
     }
 
 }
