@@ -268,7 +268,6 @@ public class BatteryMeterDrawable extends Drawable implements
         super.setBounds(left, top, right, bottom);
         mHeight = bottom - top;
         mWidth = right - left;
-        mWarningTextPaint.setTextSize(mHeight * 0.75f);
         mWarningTextHeight = -mWarningTextPaint.getFontMetrics().ascent;
     }
 
@@ -450,6 +449,65 @@ public class BatteryMeterDrawable extends Drawable implements
             } else {
                 // otherwise cut the bolt out of the overall shape
                 mShapePath.op(mPlusPath, Path.Op.DIFFERENCE);
+    /**
+     * Initializes all size dependent variables
+     */
+    private void init() {
+        // Not much we can do with zero width or height, we'll get another pass later
+        if (mWidth <= 0 || mHeight <= 0) return;
+
+        final float widthDiv2 = mWidth / 2f;
+        // text size is width / 2 - 2dp for wiggle room
+        final float textSize = mStyle == 2 ? widthDiv2 - mContext.getResources().getDisplayMetrics().density * 2 : widthDiv2;
+        mTextAndBoltPaint.setTextSize(textSize);
+        mWarningTextPaint.setTextSize(textSize);
+
+        Rect iconBounds = new Rect(0, 0, mWidth, mHeight);
+        mBatteryDrawable.setBounds(iconBounds);
+
+        // Calculate text position
+        Rect bounds = new Rect();
+        mTextAndBoltPaint.getTextBounds("99", 0, "99".length(), bounds);
+        final boolean isRtl = getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+
+        // Compute mTextX based on text gravity
+        if ((mTextGravity & Gravity.START) == Gravity.START) {
+            mTextX = isRtl ? mWidth : 0;
+        } else if ((mTextGravity & Gravity.END) == Gravity.END) {
+            mTextX = isRtl ? 0 : mWidth;
+        } else if ((mTextGravity & Gravity.LEFT) == Gravity.LEFT) {
+            mTextX = 0;
+        } else if ((mTextGravity & Gravity.RIGHT) == Gravity.RIGHT) {
+            mTextX = mWidth;
+        } else {
+            mTextX = widthDiv2;
+        }
+
+        // Compute mTextY based on text gravity
+        if ((mTextGravity & Gravity.TOP) == Gravity.TOP) {
+            mTextY = bounds.height();
+        } else if ((mTextGravity & Gravity.BOTTOM) == Gravity.BOTTOM) {
+            mTextY = mHeight;
+        } else {
+            mTextY = widthDiv2 + bounds.height() / 2.0f;
+        }
+
+        updateBoltDrawableLayer(mBatteryDrawable, mBoltDrawable);
+
+        mInitialized = true;
+    }
+
+    // Creates a BitmapDrawable of the bolt so we can make use of
+    // the XOR xfer mode with vector-based drawables
+    private void updateBoltDrawableLayer(LayerDrawable batteryDrawable, Drawable boltDrawable) {
+        BitmapDrawable newBoltDrawable;
+        if (boltDrawable instanceof BitmapDrawable) {
+            newBoltDrawable = (BitmapDrawable) boltDrawable.mutate();
+        } else {
+            Bitmap boltBitmap = createBoltBitmap(boltDrawable);
+            if (boltBitmap == null) {
+                // Not much to do with a null bitmap so keep original bolt for now
+                return;
             }
         }
 
