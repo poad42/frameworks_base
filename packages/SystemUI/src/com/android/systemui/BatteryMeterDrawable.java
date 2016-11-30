@@ -440,6 +440,19 @@ public class BatteryMeterDrawable extends Drawable implements
                         mPlusFrame.left + mPlusPoints[0] * mPlusFrame.width(),
                         mPlusFrame.top + mPlusPoints[1] * mPlusFrame.height());
             }
+    private int getBoltColor() {
+        if (mBoltOverlay) {
+            return mContext.getResources().getColor(mStyle == BATTERY_STYLE_CIRCLE
+                                                        ? R.color.batterymeter_bolt_color
+                                                        : R.color.system_primary_color);
+        }
+        if (mStyle == BATTERY_STYLE_CIRCLE) {
+            updateChargeColor();
+            int chargeColor = mChargeColor;
+            return chargeColor;
+        }
+        return mContext.getResources().getColor(R.color.batterymeter_bolt_color);
+    }
 
             float boltPct = (mPlusFrame.bottom - levelTop) / (mPlusFrame.bottom - mPlusFrame.top);
             boltPct = Math.min(Math.max(boltPct, 0), 1);
@@ -457,8 +470,24 @@ public class BatteryMeterDrawable extends Drawable implements
         if (mWidth <= 0 || mHeight <= 0) return;
 
         final float widthDiv2 = mWidth / 2f;
+<<<<<<< HEAD
         // text size is width / 2 - 2dp for wiggle room
         final float textSize = mStyle == 2 ? widthDiv2 - mContext.getResources().getDisplayMetrics().density * 2 : widthDiv2;
+=======
+        final float textSize;
+        switch(mStyle) {
+            case BATTERY_STYLE_CIRCLE:
+                textSize = widthDiv2 * 0.8f;
+                break;
+            case BATTERY_STYLE_LANDSCAPE:
+                textSize = widthDiv2 * 1.0f;
+                break;
+            default:
+                textSize = widthDiv2 * 0.9f;
+                break;
+        }
+
+>>>>>>> 53bd77d... Circle battery inside icon percentage: eyes saver size
         mTextAndBoltPaint.setTextSize(textSize);
         mWarningTextPaint.setTextSize(textSize);
 
