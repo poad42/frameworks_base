@@ -16,8 +16,10 @@
 
 package com.android.internal.util.yaap;
 
+import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.om.IOverlayManager;
 import android.content.pm.PackageManager;
 import android.hardware.input.InputManager;
 import android.hardware.Sensor;
@@ -39,6 +41,9 @@ import android.view.KeyEvent;
 import android.view.WindowManagerGlobal;
 
 import com.android.internal.statusbar.IStatusBarService;
+import com.android.systemui.R;
+
+import java.util.Objects;
 
 /**
  * Some custom utilities
@@ -156,5 +161,37 @@ public class YaapUtils {
         final TypedValue value = new TypedValue ();
         context.getTheme().resolveAttribute(android.R.attr.colorAccent, value, true);
         return value.data;
+    }
+
+    public static void setPrimaryoverlay(Context context, int theme, int mode ) {
+
+        if (context != null) {
+            Objects.requireNonNull(context.getSystemService(UiModeManager.class))
+                    .setNightMode(mode);
+        }
+        private IOverlayManager mOverlayManager;
+        String [] overlays = res.getStringArray(R.array.custom_themes_available);
+
+        //disable all previous overlays before enabling the new selected one
+        for (int i=0; i < overlays.length; i++)
+        {
+            String background = overlays[i];
+            try {
+                mOverlayManager.setEnabled(background, false, USER_SYSTEM);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        //enable the overlay
+        for (int i = theme; i < theme+1; i++) {
+            String background = overlays[i];
+            try {
+                mOverlayManager.setEnabled(background, true, USER_SYSTEM);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     }
 }
